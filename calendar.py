@@ -19,10 +19,9 @@
 import codecs
 import urllib2
 from datetime import date, timedelta, datetime
-from requests import Session
 from itertools import chain
 from urlparse import urljoin
-from BeautifulSoup import BeautifulSoup as BS
+from bs4 import BeautifulSoup as BS
 
 try:
     import json
@@ -30,7 +29,6 @@ except:
     import simplejson as json
 
 BASE_URL = 'http://www.slbenfica.pt/'
-
 
 
 def _full_url(url):
@@ -61,14 +59,14 @@ def monthToNum(month):
             'Dez' : 12
     }[month.title()]
 
-class Agenda(object):
+class Calendar(object):
     
     def __init__(self, startDate=None, numWeeks=None, language=None):
         
         if startDate:
-            self.first_week_day, self.last_week_day = Agenda.first_last_week_day(startDate)
+            self.first_week_day, self.last_week_day = Calendar.first_last_week_day(startDate)
         else:
-            self.first_week_day, self.last_week_day = Agenda.first_last_week_day(date.today())
+            self.first_week_day, self.last_week_day = Calendar.first_last_week_day(date.today())
 
         self.numWeeks = numWeeks if numWeeks else '1'
 
@@ -96,7 +94,7 @@ class Agenda(object):
         events = []
         event  = {}
 
-        html_soup = BS(download_page(url).read().decode('utf-8', 'ignore'), convertEntities=BS.HTML_ENTITIES)
+        html_soup = BS(download_page(url).read().decode('utf-8', 'ignore'))
         
         uls = html_soup.findAll('ul', {'class': 'agEvt'})
         lis = [ul.findAll('li') for ul in uls]
@@ -138,8 +136,7 @@ class Agenda(object):
 if __name__ == '__main__':
     
     _startdate = date(2014, 10, 25)
-    agenda = Agenda(startDate=_startdate, numWeeks='2')
-    calendar = agenda.get_calendar()
+    calendar = Calendar(startDate=_startdate, numWeeks='2').get_calendar()
     if calendar:
         with codecs.open('calendar.json', "w", encoding='utf-8') as f:
             f.write(unicode(json.dumps(calendar, ensure_ascii=False)))

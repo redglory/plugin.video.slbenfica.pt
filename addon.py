@@ -23,7 +23,7 @@
 import sys, re
 from urlparse import urlparse, parse_qs, urljoin
 from itertools import chain
-from datetime import datetime
+from datetime import datetime, date
 import time
 import urllib2
 
@@ -335,7 +335,7 @@ def show_menu():
         {'label': plugin.get_string(30004), 'path': plugin.url_for('show_media_categories', media_type = 'photos')},
         {'label': plugin.get_string(30005), 'path': plugin.url_for('show_stadium')},
         {'label': plugin.get_string(30006), 'path': plugin.url_for('show_tickets')},
-        {'label': plugin.get_string(30007), 'path': plugin.url_for('show_calendar')},
+        {'label': plugin.get_string(30007), 'path': plugin.url_for('show_calendar', date=datetime.now().strftime("%d-%m-%Y"))},
     ]
 
     return items
@@ -514,12 +514,17 @@ def play_slideshow(album_id):
 @plugin.route('/stadium/')
 def show_stadium():
     print ""
+
 @plugin.route('/tickets/')    
 def show_tickets():
     print ""
-@plugin.route('/calendar/')    
-def show_calendar():
+
+@plugin.route('/calendar/<date>/weeks/<weeks>')    
+def show_calendar(date, numWeeks=1):
     
+    _startdate = date(date[6:10], date[3:5], date[:2])
+    calendar = Calendar(startDate=_startdate, numWeeks=numWeeks).get_calendar()
+
 
 ############################
 #           MAIN
