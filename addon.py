@@ -335,6 +335,7 @@ def show_menu():
         {'label': plugin.get_string(30004), 'path': plugin.url_for('show_media_categories', media_type = 'photos')},
         {'label': plugin.get_string(30005), 'path': plugin.url_for('show_stadium')},
         {'label': plugin.get_string(30006), 'path': plugin.url_for('show_tickets')},
+        {'label': plugin.get_string(30007), 'path': plugin.url_for('show_calendar')},
     ]
 
     return items
@@ -516,6 +517,9 @@ def show_stadium():
 @plugin.route('/tickets/')    
 def show_tickets():
     print ""
+@plugin.route('/calendar/')    
+def show_calendar():
+    
 
 ############################
 #           MAIN
