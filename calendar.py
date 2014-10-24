@@ -22,6 +22,7 @@ from datetime import date, timedelta, datetime
 from itertools import chain
 from urlparse import urljoin
 from bs4 import BeautifulSoup as BS
+import unicodedata
 
 try:
     import json
@@ -32,11 +33,11 @@ BASE_URL = 'http://www.slbenfica.pt/'
 
 
 def _full_url(url):
-    ''' Retrieve full url '''
+
     return urljoin(BASE_URL, url)
 
 def download_page(url, data=None):
-
+    
     request = urllib2.Request(url, data)
     request.add_header('Accept-Encoding', 'utf-8')
     response = urllib2.urlopen(request)
@@ -59,38 +60,65 @@ def monthToNum(month):
             'Dez' : 12
     }[month.title()]
 
+def getSportID(sport):
+
+    return{
+            'andebol'       : 1,
+            'automobilismo' : 2,
+            'basquetebol'   : 3,
+            'funzone'       : 4,
+            'futebol'       : 5,
+            'futsal'        : 6,
+            'geral'         : 7,
+            'hoquei'        : 8,
+            'rugby'         : 9, 
+            'voleibol'      : 10,
+            'bilhar'        : 11,
+            'atletismo'     : 12,
+            'tenis de mesa' : 13,
+    }[sport]
+
+def remove_accents(name):
+    return unicodedata.normalize('NFKD', name).encode('ascii','ignore').lower()
+
 class Calendar(object):
     
     def __init__(self, startDate=None, numWeeks=None, language=None):
         
-        if startDate:
-            self.first_week_day, self.last_week_day = Calendar.first_last_week_day(startDate)
-        else:
-            self.first_week_day, self.last_week_day = Calendar.first_last_week_day(date.today())
-
         self.numWeeks = numWeeks if numWeeks else '1'
+
+        if startDate:
+            self.first_day, self.last_day = Calendar.first_last_day(startDate, self.numWeeks)
+        else:
+            self.first_day, self.last_day = Calendar.first_last_day(date.today(), self.numWeeks)
 
         self.language = language if language else 'pt-pt'
 
 
     @staticmethod
-    def first_last_week_day(day):
+    def first_last_day(day, numWeeks=1):
+
+        if numWeeks:
+            end_day = (7 * int(numWeeks)) - 1
+        
         day_of_week = day.weekday()
     
         to_beginning_of_week = timedelta(days=day_of_week)
         beginning_of_week = day - to_beginning_of_week
     
-        to_end_of_week = timedelta(days=6 - day_of_week)
+        to_end_of_week = timedelta(days=end_day - day_of_week)
         end_of_week = day + to_end_of_week
     
         return (beginning_of_week.strftime("%d-%m-%Y"), end_of_week.strftime("%d-%m-%Y"))
 
     def get_calendar(self):
         
-        url = 'http://m.slbenfica.pt/HttpHandlers/SLBSportsAgenda.ashx?ModID=1172&LvlId=-1&AgendaStartDate='+self.first_week_day+'%2000:00:00&NumWeeks='+self.numWeeks+'&CurrentType=Event&Culture='+self.language+'&Mobile=true&PurchaseTicketURL=https://m.slbenfica.pt/'+self.language+'/bilhetes/comprar.aspx'
+        url = 'http://m.slbenfica.pt/HttpHandlers/SLBSportsAgenda.ashx?ModID=1172&LvlId=-1&AgendaStartDate='+self.first_day+'%2000:00:00&NumWeeks='+self.numWeeks+'&CurrentType=Event&Culture='+self.language+'&Mobile=true&PurchaseTicketURL=https://m.slbenfica.pt/'+self.language+'/bilhetes/comprar.aspx'
 
         # convert html to json
         calendar = {}
+        sports = []
+        sports_events = {}
         events = []
         event  = {}
 
@@ -101,6 +129,7 @@ class Calendar(object):
 
         for li in chain(*lis):
             
+            # event date
             day = int(li.find('span', {'class': 't20wt'}).string)
             _month = li.find('p', {'class': 't9red'}).string
             month = monthToNum(_month)
@@ -108,28 +137,55 @@ class Calendar(object):
             if _month < datetime.now().month:
                 year = year + 1
             _date = date(year, month, day).strftime("%d-%m-%Y")
-
             weekday                 = li.find('p', {'class': 't9lt'}).string
-            sport                   = li.find('div', {'class': 'agMod t14red'}).string
-            event['sport']          = sport
-            event['event']          = li.find('p', {'class': 'agTit t12wtB'}).string
-            event['local']          = li.find('p', {'class': 'agLoc t12lt2B'}).string
-            event['description']    = li.find('span', {'class': 't12lt'}).string if li.find('span', {'class': 't12lt'}) else '""'
-            img_home                = li.find('div', {'class': 'eHo'})
-            event['home_team_img']  = _full_url(img_home.img['src']) if img_home else ''
-            event['home_team_name'] = img_home.img['alt'] if img_home else ''
-            img_away                = li.find('div', {'class': 'eVi'})
-            event['away_team_img']  = _full_url(img_away.img['src']) if img_away else ''
-            event['away_team_name'] = img_away.img['alt'] if img_away else ''
-            event['buy_ticket']     = li.find('a', {'class': 'agBt btDark'}).href if li.find('a', {'class': 'agBt btDark'}) else ''
 
-            if calendar.get(_date):
-                calendar[_date].append(event)
-            else:
+            # sport
+            _sport                  = li.find('div', {'class': 'agMod t14red'}).string
+            sportName               = remove_accents(_sport) # no accents
+
+            # sport event
+            event["date"]           = _date
+            event["event"]          = li.find('p', {'class': 'agTit t12wtB'}).string
+            event["local"]          = li.find('p', {'class': 'agLoc t12lt2B'}).string
+            event["description"]    = li.find('span', {'class': 't12lt'}).string if li.find('span', {'class': 't12lt'}) else ""
+            img_home                = li.find('div', {'class': 'eHo'})
+            event["home_team_img"]  = _full_url(img_home.img['src']) if img_home else ""
+            event["home_team_name"] = img_home.img['alt'] if img_home else ""
+            img_away                = li.find('div', {'class': 'eVi'})
+            event["away_team_img"]  = _full_url(img_away.img['src']) if img_away else ""
+            event["away_team_name"] = img_away.img['alt'] if img_away else ""
+            event["buy_ticket"]     = li.find('a', {'class': 'agBt btDark'}).href if li.find('a', {'class': 'agBt btDark'}) else ""
+
+            # build sports events
+            if sports_events.get(sportName): # sport already exists
+                sports_events[sportName].append(event)
+            else: # new sport -> add to dict with event
                 events.append(event)
-                calendar[_date] = events
+                sports_events[sportName] = events
+        
             event = {}
             events = []
+
+        ########################################################################################
+        # build json format
+        ########################################################################################
+        # structure:
+        # { "calendar": { "type": "list"
+        #                 "sports": [ {"id": "5", "name": "futebol", "events": [...] }
+        #                             {"id": "2", "name": "automobilismo", "events": [...] }
+        #                             {"id": "6", "name": "futsal", "events": [...] }
+        #                           ]
+        #                 "start_date" : "01-01-2014"
+        #                 "end_date"   : "15-03-2014"
+        # }
+        ########################################################################################
+
+        calendar["calendar"] = {"type": "list", "start_date" : self.first_day, "end_date": self.last_day}
+
+        for k, v in sports_events.iteritems():
+            sports.append({"id": getSportID(k), "name": k, "events": v})
+
+        calendar["calendar"]["sports"] = sports
 
         return calendar if calendar else []
         
