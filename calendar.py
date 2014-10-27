@@ -60,23 +60,58 @@ def monthToNum(month):
             'Dez' : 12
     }[month.title()]
 
-def getSportID(sport):
-
+def translate_sport(sport):
     return{
-            'andebol'       : 1,
-            'automobilismo' : 2,
-            'basquetebol'   : 3,
-            'funzone'       : 4,
-            'futebol'       : 5,
-            'futsal'        : 6,
-            'geral'         : 7,
-            'hoquei'        : 8,
-            'rugby'         : 9, 
-            'voleibol'      : 10,
-            'bilhar'        : 11,
-            'atletismo'     : 12,
-            'tenis de mesa' : 13,
+        'handball': 'andebol', 'balonmano': 'andebol',
+        'football': 'futebol', 'futbol': 'futebol',
+        'basketball': 'basquetebol', 'baloncesto': 'basquetebol',
+        'funzone': 'funzone',
+        'futsal': 'futsal',
+        'hockey': 'hoquei',
+        'rugby': 'rugby',
+        'volleyball': 'voleibol',
+        'table tennis': 'tenis de mesa',
+        'athletics': 'atletismo', 
+        'billiards': 'bilhar', 'billar': 'bilhar',
+        'geral': 'geral',
+        'automobilismo': 'automobilismo',
     }[sport]
+
+def get_sport_info(sport):
+
+    sports=['andebol',   
+            'automobilismo', 
+            'basquetebol',
+            'funzone',  
+            'futebol',      
+            'futsal',      
+            'geral',       
+            'hoquei',        
+            'rugby',       
+            'voleibol',      
+            'bilhar',     
+            'atletismo',     
+            'tenis de mesa']
+
+    _sport = translate_sport(sport) if sport not in sports else sport
+
+
+    # [sport]: (id, img)
+    return{
+            'andebol'       : (1, "Handball.png"),
+            'automobilismo' : (2, "Racing.png"),
+            'basquetebol'   : (3, "Basketball.png"),
+            'funzone'       : (4, "FunZone.png"),
+            'futebol'       : (5, "Football.png"),
+            'futsal'        : (6, "Football.png"),
+            'geral'         : (7, "Other.png"),
+            'hoquei'        : (8, "Hockey.png"),
+            'rugby'         : (9, "Rugby.png"), 
+            'voleibol'      : (10, "Volleyball.png"),
+            'bilhar'        : (11, "Billiard.png"),
+            'atletismo'     : (12, "Athletics.png"),
+            'tenis de mesa' : (13, "Table Tennis.png"),
+    }[_sport]
 
 def remove_accents(name):
     return unicodedata.normalize('NFKD', name).encode('ascii','ignore').lower()
@@ -88,15 +123,15 @@ class Calendar(object):
         self.numWeeks = numWeeks if numWeeks else '1'
 
         if startDate:
-            self.first_day, self.last_day = Calendar.first_last_day(startDate, self.numWeeks)
+            self.first_day, self.last_day = Calendar.first_last_day(startDate, self.numWeeks, language)
         else:
-            self.first_day, self.last_day = Calendar.first_last_day(date.today(), self.numWeeks)
+            self.first_day, self.last_day = Calendar.first_last_day(date.today(), self.numWeeks, language)
 
         self.language = language if language else 'pt-pt'
 
 
     @staticmethod
-    def first_last_day(day, numWeeks=1):
+    def first_last_day(day, numWeeks=1, language='pt-pt'):
 
         if numWeeks:
             end_day = (7 * int(numWeeks)) - 1
@@ -108,8 +143,13 @@ class Calendar(object):
     
         to_end_of_week = timedelta(days=end_day - day_of_week)
         end_of_week = day + to_end_of_week
-    
-        return (beginning_of_week.strftime("%d-%m-%Y"), end_of_week.strftime("%d-%m-%Y"))
+        
+        if language.lower() == 'pt-pt':
+            return (beginning_of_week.strftime("%d-%m-%Y"), end_of_week.strftime("%d-%m-%Y"))
+        elif language.lower() == 'en-us':
+            return (beginning_of_week.strftime("%m/%d/%Y"), end_of_week.strftime("%m/%d/%Y"))
+        elif language.lower() == 'es-es':
+            return (beginning_of_week.strftime("%d/%m/%Y"), end_of_week.strftime("%d/%m/%Y"))
 
     def get_calendar(self):
         
@@ -183,7 +223,8 @@ class Calendar(object):
         calendar["calendar"] = {"type": "list", "start_date" : self.first_day, "end_date": self.last_day}
 
         for k, v in sports_events.iteritems():
-            sports.append({"id": getSportID(k), "name": k, "events": v})
+            _id, _img = get_sport_info(k)
+            sports.append({"id": _id, "name": k, "img": _img, "events": v})
 
         calendar["calendar"]["sports"] = sports
 
@@ -192,7 +233,7 @@ class Calendar(object):
 if __name__ == '__main__':
     
     _startdate = date(2014, 10, 25)
-    calendar = Calendar(startDate=_startdate, numWeeks='2').get_calendar()
+    calendar = Calendar(startDate=_startdate, numWeeks='2', language="es-ES").get_calendar()
     if calendar:
         with codecs.open('calendar.json', "w", encoding='utf-8') as f:
             f.write(unicode(json.dumps(calendar, ensure_ascii=False)))

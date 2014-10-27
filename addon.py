@@ -325,6 +325,7 @@ def show_menu():
     #              'photos'     : plugin.get_string(30004),
     #              'stadium     : plugin.get_string(30005),
     #              'tickets'    : plugin.get_string(30006),
+    #              'calendar'   : plugin.get_string(30007),
     #            }
     ##########################################################
 
